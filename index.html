@@ -453,6 +453,7 @@
   button.action:active { transform: translate(1px, 1px); box-shadow: none; }
   button.action.secondary { background: var(--paper); color: var(--ink); }
   button.action:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.action.playing { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 
   .ornament {
     text-align: center;
@@ -566,6 +567,7 @@
 
     <div class="controls">
       <button class="action secondary" id="resetBtn">Reset</button>
+      <button class="action secondary" id="playBtn">▶ Play</button>
       <button class="action secondary" id="revealBtn">Reveal All</button>
       <button class="action" id="nextBtn" disabled>New Round →</button>
     </div>
@@ -1307,6 +1309,131 @@
   document.getElementById('resetBtn').addEventListener('click', reset);
   document.getElementById('revealBtn').addEventListener('click', revealAll);
 
+  // ---- AUDIO ----
+  let _audioCtx = null;
+  let _trumpet = null;
+  let _audioReady = false;
+  let _audioLoading = false;
+
+  function getAudioCtx() {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return _audioCtx;
+  }
+
+  async function loadTrumpet() {
+    if (_audioLoading) return;
+    _audioLoading = true;
+    const btn = document.getElementById('playBtn');
+    btn.textContent = '⏳ Loading…';
+    btn.disabled = true;
+    try {
+      const ac = getAudioCtx();
+      _trumpet = await Soundfont.instrument(ac, 'trumpet', { soundfont: 'MusyngKite' });
+      _audioReady = true;
+    } catch (e) {
+      alert('Could not load trumpet sound — check your internet connection.');
+    } finally {
+      btn.textContent = '▶ Play';
+      btn.disabled = false;
+      _audioLoading = false;
+    }
+  }
+
+  function noteToMidi(noteName, octave) {
+    const idx = noteIndex(noteName);
+    return idx === -1 ? null : 12 * (octave + 1) + idx;
+  }
+
+  function intervalSemi(name) {
+    const iv = ALL_INTERVALS.find(iv => iv.name === name);
+    return iv ? iv.semi : 0;
+  }
+
+  function getPlayNotes() {
+    const notes = [];
+
+    if (state.mode === 'discovery') {
+      const rootMidi = noteToMidi(state.startNote, 4);
+      if (rootMidi === null) return notes;
+      notes.push(rootMidi);
+      if (state.answered) {
+        // all solved — play in ascending semitone order
+        state.targets.slice().sort((a, b) => a.semi - b.semi)
+          .forEach(t => notes.push(rootMidi + t.semi));
+      } else {
+        const t = state.targets[state.activeTargetIdx];
+        if (t) notes.push(rootMidi + t.semi);
+      }
+
+    } else if (state.mode === 'diatonic') {
+      const degSemis = state.scaleIsMinor ? MINOR_DEGREE_SEMITONES : MAJOR_DEGREE_SEMITONES;
+      const rootMidi = noteToMidi(state.scaleRoot.replace('m', ''), 4);
+      if (rootMidi === null) return notes;
+      // chain display order: [1, 3, 5, 7, 2, 4, 6]
+      // degrees 2, 4, 6 are the upper extensions (9th, 11th, 13th) → +12
+      const orderedDegrees = [1, 3, 5, 7, 2, 4, 6];
+      state.chain.forEach((s, i) => {
+        if (s.filled || s.given) {
+          const deg = orderedDegrees[i];
+          let semi = degSemis[deg - 1];
+          if ([2, 4, 6].includes(deg)) semi += 12;
+          notes.push(rootMidi + semi);
+        }
+      });
+
+    } else {
+      const q = state.fifthsQ;
+      if (!q) return notes;
+      if (q.kind === 'note') {
+        const startMidi = noteToMidi(q.startNote, 4);
+        if (startMidi === null) return notes;
+        const semi = intervalSemi(q.intervalName);
+        notes.push(startMidi, q.direction === 'up' ? startMidi + semi : startMidi - semi);
+      } else {
+        // identify variant — play both given notes
+        const fromMidi = noteToMidi(q.fromNote, 4);
+        if (fromMidi === null) return notes;
+        let diff = noteIndex(q.toNote) - noteIndex(q.fromNote);
+        if (q.direction === 'up' && diff < 0) diff += 12;
+        if (q.direction === 'down' && diff > 0) diff -= 12;
+        notes.push(fromMidi, fromMidi + diff);
+      }
+    }
+
+    return notes.filter(n => n !== null);
+  }
+
+  async function playSequence() {
+    if (!_audioReady) {
+      await loadTrumpet();
+      if (!_audioReady) return;
+    }
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') await ac.resume();
+
+    const notes = getPlayNotes();
+    if (!notes.length) return;
+
+    const btn = document.getElementById('playBtn');
+    btn.classList.add('playing');
+    btn.textContent = '♪';
+    btn.disabled = true;
+
+    const dur = 0.65;
+    const gap = 0.12;
+    notes.forEach((midi, i) => {
+      _trumpet.play(midi, ac.currentTime + i * (dur + gap), { duration: dur });
+    });
+
+    setTimeout(() => {
+      btn.classList.remove('playing');
+      btn.textContent = '▶ Play';
+      btn.disabled = false;
+    }, notes.length * (dur + gap) * 1000 + 200);
+  }
+
+  document.getElementById('playBtn').addEventListener('click', playSequence);
+
   newRound();
 
   // ---- PWA: register service worker for offline use ----
@@ -1316,5 +1443,6 @@
     });
   }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
 </body>
 </html>
