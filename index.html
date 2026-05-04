@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Interval Trainer</title>
+<meta name="theme-color" content="#161413" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Intervals" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #161413;
+    --paper: #f4ede1;
+    --paper-deep: #ebe1cf;
+    --rule: #2a2624;
+    --accent: #b8341a;
+    --accent-soft: #d4a574;
+    --green: #4a6741;
+    --muted: #6b6358;
+    --slot-bg: #fbf6ec;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Fraunces', Georgia, serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(184, 52, 26, 0.04), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(74, 103, 65, 0.04), transparent 40%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    padding: 24px 14px 80px;
+  }
+
+  .frame {
+    max-width: 780px;
+    margin: 0 auto;
+    border: 1.5px solid var(--rule);
+    background: var(--paper);
+    padding: 26px 24px 32px;
+    position: relative;
+    box-shadow: 0 1px 0 var(--rule), 6px 6px 0 -3px var(--rule);
+  }
+
+  .frame::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 0.5px solid var(--rule);
+    pointer-events: none;
+  }
+
+  .masthead {
+    text-align: center;
+    border-bottom: 1.5px solid var(--rule);
+    padding-bottom: 16px;
+    margin-bottom: 18px;
+  }
+
+  .kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: clamp(30px, 6vw, 46px);
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+
+  h1 .amp { color: var(--accent); font-weight: 400; }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  .mode-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 0;
+    margin-bottom: 14px;
+    border: 1px solid var(--rule);
+  }
+
+  .mode-tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 12px 8px;
+    background: var(--paper);
+    border: none;
+    border-right: 1px solid var(--rule);
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--ink);
+    transition: all 0.12s ease;
+    line-height: 1.3;
+  }
+  .mode-tab:last-child { border-right: none; }
+  .mode-tab:hover { background: var(--paper-deep); }
+  .mode-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .mode-info {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 16px;
+    font-style: italic;
+    line-height: 1.4;
+  }
+
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .stat-block { display: flex; flex-direction: column; gap: 2px; }
+  .stat-label { color: var(--muted); font-size: 9px; }
+  .stat-value { color: var(--ink); font-weight: 600; font-size: 13px; }
+  .stat-value.score { color: var(--green); }
+  .stat-value.streak { color: var(--accent); }
+
+  .question-card {
+    border: 1px solid var(--rule);
+    background: var(--paper-deep);
+    padding: 20px 16px;
+    margin-bottom: 18px;
+    text-align: center;
+    position: relative;
+  }
+  .question-card::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 0.5px solid var(--rule);
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  .prompt-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .task-line {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(18px, 3.5vw, 24px);
+    font-weight: 400;
+    line-height: 1.3;
+  }
+
+  .task-line .root {
+    font-weight: 800;
+    font-style: italic;
+    color: var(--accent);
+    font-size: 1.3em;
+  }
+  .task-line em {
+    font-style: italic;
+    border-bottom: 1.5px solid var(--rule);
+    padding-bottom: 1px;
+  }
+
+  /* Targets list (for interval discovery mode) */
+  .targets-section { margin-bottom: 16px; }
+
+  .targets-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .targets-label .progress {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .targets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px;
+    border: 1px dashed var(--rule);
+    background: var(--slot-bg);
+    min-height: 56px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .target-pill {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 14px;
+    padding: 6px 12px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .target-pill.active {
+    border-color: var(--accent);
+    border-width: 2px;
+    background: var(--paper-deep);
+    box-shadow: 0 0 0 3px rgba(184, 52, 26, 0.12);
+    font-weight: 600;
+  }
+
+  .target-pill.solved {
+    background: rgba(74, 103, 65, 0.12);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .target-pill .answer-note {
+    font-weight: 800;
+    font-style: italic;
+    font-size: 16px;
+  }
+
+  /* Slots for diatonic mode */
+  .slots-section { margin-bottom: 18px; }
+
+  .slots-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .slots-label .progress { color: var(--ink); font-weight: 600; }
+
+  .slots {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 14px 10px;
+    border: 1px dashed var(--rule);
+    background: var(--slot-bg);
+    min-height: 76px;
+    align-items: center;
+  }
+
+  .slot {
+    min-width: 56px;
+    height: 56px;
+    border: 1.5px solid var(--rule);
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 600;
+    font-style: italic;
+    position: relative;
+    transition: all 0.2s ease;
+    padding: 4px 8px;
+  }
+
+  .slot.given {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .slot.active {
+    border-color: var(--accent);
+    border-width: 2.5px;
+    box-shadow: 0 0 0 3px rgba(184, 52, 26, 0.12);
+  }
+
+  .slot.filled {
+    background: rgba(74, 103, 65, 0.12);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .slot .slot-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+    font-style: normal;
+    margin-top: 2px;
+    line-height: 1;
+  }
+  .slot.given .slot-label { color: var(--accent-soft); }
+  .slot.filled .slot-label { color: var(--green); opacity: 0.7; }
+
+  /* Note picker */
+  .picker-section { margin-bottom: 14px; }
+
+  .picker-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .picker {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+
+  .note-btn {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    font-weight: 600;
+    font-style: italic;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    padding: 12px 4px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    line-height: 1.1;
+  }
+
+  .note-btn:hover:not(:disabled) {
+    background: var(--ink);
+    color: var(--paper);
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0 var(--rule);
+  }
+  .note-btn:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: none; }
+  .note-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .note-btn.flash-wrong {
+    background: var(--accent);
+    color: var(--paper);
+    border-color: var(--accent);
+  }
+
+  /* Feedback */
+  .feedback {
+    min-height: 46px;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    margin-bottom: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: all 0.2s ease;
+    opacity: 0;
+  }
+  .feedback.show { opacity: 1; }
+  .feedback.correct {
+    border-color: var(--green);
+    background: rgba(74, 103, 65, 0.08);
+    color: var(--green);
+  }
+  .feedback.wrong {
+    border-color: var(--accent);
+    background: rgba(184, 52, 26, 0.06);
+    color: var(--accent);
+  }
+  .feedback.complete {
+    border-color: var(--ink);
+    background: var(--paper-deep);
+    color: var(--ink);
+  }
+  .feedback strong { font-weight: 800; font-style: italic; }
+  .feedback .hint {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-top: 6px;
+    text-transform: none;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  button.action {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 11px 18px;
+    border: 1px solid var(--rule);
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.12s ease;
+  }
+  button.action:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--rule);
+  }
+  button.action:active { transform: translate(1px, 1px); box-shadow: none; }
+  button.action.secondary { background: var(--paper); color: var(--ink); }
+  button.action:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .ornament {
+    text-align: center;
+    color: var(--muted);
+    margin: 12px 0 8px;
+    font-size: 12px;
+    letter-spacing: 0.5em;
+  }
+
+  .footer-note {
+    text-align: center;
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .single-section {
+    margin-bottom: 14px;
+  }
+  .single-section .targets-label {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 520px) {
+    .frame { padding: 20px 14px 26px; }
+    .picker { grid-template-columns: repeat(4, 1fr); }
+    .note-btn { font-size: 13px; }
+    .slot { min-width: 48px; height: 48px; font-size: 18px; }
+    .mode-tab { font-size: 9px; padding: 10px 4px; }
+    .target-pill { font-size: 12px; padding: 5px 9px; }
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="masthead">
+      <div class="kicker">Music Theory · Two Skills, Two Drills</div>
+      <h1>Intervals <span class="amp">&amp;</span> Scales</h1>
+      <div class="subtitle">Discover · Walk · Internalize</div>
+    </div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="discovery">Interval Discovery</button>
+      <button class="mode-tab" data-mode="diatonic">Chord-Tones Walk</button>
+      <button class="mode-tab" data-mode="fifths">4ths &amp; 5ths Drill</button>
+      <button class="mode-tab" data-mode="single">Single Interval</button>
+    </div>
+
+    <div class="mode-info" id="modeInfo">
+      Find every interval target from a given starting point. Targets shuffle — no fixed order.
+    </div>
+
+    <div class="stats">
+      <div class="stat-block">
+        <span class="stat-label">Round</span>
+        <span class="stat-value" id="qNumber">1</span>
+      </div>
+      <div class="stat-block" style="text-align:center;">
+        <span class="stat-label">Score</span>
+        <span class="stat-value score" id="score">0 / 0</span>
+      </div>
+      <div class="stat-block" style="text-align:right;">
+        <span class="stat-label">Streak</span>
+        <span class="stat-value streak" id="streak">0</span>
+      </div>
+    </div>
+
+    <div class="question-card">
+      <div class="prompt-line" id="promptLine"></div>
+      <div class="task-line" id="taskLine"></div>
+    </div>
+
+    <!-- Discovery mode: list of interval targets to solve -->
+    <div class="targets-section" id="targetsSection" style="display:none;">
+      <div class="targets-label">
+        <span>Targets — find each interval</span>
+        <span class="progress" id="targetsProgress">0 / 0</span>
+      </div>
+      <div class="targets" id="targets"></div>
+    </div>
+
+    <!-- Diatonic mode: chain of slots in chord-tones order -->
+    <div class="slots-section" id="slotsSection" style="display:none;">
+      <div class="slots-label">
+        <span>Chord tones · 1 3 5 7 9 11 13</span>
+        <span class="progress" id="slotsProgress">0 / 0</span>
+      </div>
+      <div class="slots" id="slots"></div>
+    </div>
+
+    <!-- 4ths/5ths drill: single Q&A, no chain -->
+    <div class="single-section" id="singleSection" style="display:none;">
+      <div class="targets-label">
+        <span id="singleVariantLabel">Variant</span>
+        <span class="progress" id="singleProgress">0 / 10</span>
+      </div>
+    </div>
+
+    <div class="picker-section">
+      <span class="picker-label" id="pickerLabel">— Choose the next note —</span>
+      <div class="picker" id="picker"></div>
+      <div class="picker" id="intervalPicker" style="display:none; grid-template-columns: repeat(2, 1fr); margin-top: 6px;"></div>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="ornament">✦ &nbsp; · &nbsp; ✦ &nbsp; · &nbsp; ✦</div>
+
+    <div class="controls">
+      <button class="action secondary" id="resetBtn">Reset</button>
+      <button class="action secondary" id="revealBtn">Reveal All</button>
+      <button class="action" id="nextBtn" disabled>New Round →</button>
+    </div>
+
+    <div class="footer-note" id="footerNote">Pick a note · Wrong picks flash but don't advance</div>
+  </div>
+
+<script>
+  const CHROMATIC_SHARP = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+  const CHROMATIC_FLAT  = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+
+  // Dual-spelling labels for the picker buttons (always shown, regardless of context)
+  const CHROMATIC_DUAL = ['C','C♯/D♭','D','D♯/E♭','E','F','F♯/G♭','G','G♯/A♭','A','A♯/B♭','B'];
+
+  const LETTER_NAMES = ['C','D','E','F','G','A','B'];
+  const LETTER_SEMI  = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+
+  const MAJOR_DEGREE_SEMITONES   = [0, 2, 4, 5, 7, 9, 11];
+  const MINOR_DEGREE_SEMITONES   = [0, 2, 3, 5, 7, 8, 10];
+
+  // All 11 ascending intervals (above the start)
+  const ALL_INTERVALS = [
+    { semi: 1,  letterStep: 1, name: 'minor 2nd',   short: 'm2' },
+    { semi: 2,  letterStep: 1, name: 'major 2nd',   short: 'M2' },
+    { semi: 3,  letterStep: 2, name: 'minor 3rd',   short: 'm3' },
+    { semi: 4,  letterStep: 2, name: 'major 3rd',   short: 'M3' },
+    { semi: 5,  letterStep: 3, name: 'perfect 4th', short: 'P4' },
+    { semi: 6,  letterStep: 3, name: 'tritone',     short: 'TT' }, // spelled as ♯4
+    { semi: 7,  letterStep: 4, name: 'perfect 5th', short: 'P5' },
+    { semi: 8,  letterStep: 5, name: 'minor 6th',   short: 'm6' },
+    { semi: 9,  letterStep: 5, name: 'major 6th',   short: 'M6' },
+    { semi: 10, letterStep: 6, name: 'minor 7th',   short: 'm7' },
+    { semi: 11, letterStep: 6, name: 'major 7th',   short: 'M7' },
+  ];
+
+  const ROOTS_MAJOR = ['C','G','D','A','E','B','F','B♭','E♭','A♭','D♭','F♯'];
+  const ROOTS_MINOR = ['Am','Em','Bm','F♯m','C♯m','Dm','Gm','Cm','Fm','B♭m','E♭m'];
+  const STARTING_NOTES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B','D♭','E♭','G♭','A♭','B♭'];
+
+  function noteIndex(note) {
+    // Handle dual-spelling labels like "C♯/D♭" by trying the first spelling
+    const clean = note.replace('m','').trim();
+    const firstSpelling = clean.split('/')[0];
+
+    // Try the standard chromatic arrays first
+    let i = CHROMATIC_SHARP.indexOf(firstSpelling);
+    if (i !== -1) return i;
+    i = CHROMATIC_FLAT.indexOf(firstSpelling);
+    if (i !== -1) return i;
+    i = CHROMATIC_SHARP.indexOf(clean);
+    if (i !== -1) return i;
+    i = CHROMATIC_FLAT.indexOf(clean);
+    if (i !== -1) return i;
+
+    // Handle uncommon enharmonics: letter + accidental(s)
+    // Parse a single letter followed by any number of ♯/♭/𝄪/𝄫 accidentals
+    const letterMatch = firstSpelling.match(/^([A-G])([♯♭𝄪𝄫]*)$/);
+    if (letterMatch) {
+      const letter = letterMatch[1];
+      const accidentals = letterMatch[2];
+      const baseSemi = LETTER_SEMI[letter];
+      let offset = 0;
+      for (const ch of accidentals) {
+        if (ch === '♯') offset += 1;
+        else if (ch === '♭') offset -= 1;
+        else if (ch === '𝄪') offset += 2;
+        else if (ch === '𝄫') offset -= 2;
+      }
+      return ((baseSemi + offset) % 12 + 12) % 12;
+    }
+
+    return -1;
+  }
+
+  function stepLetter(letter, steps) {
+    const idx = LETTER_NAMES.indexOf(letter);
+    return LETTER_NAMES[((idx + steps) % 7 + 7) % 7];
+  }
+
+  function spellWithLetter(chromaIdx, targetLetter) {
+    chromaIdx = ((chromaIdx % 12) + 12) % 12;
+    const baseSemi = LETTER_SEMI[targetLetter];
+    let diff = chromaIdx - baseSemi;
+    if (diff > 6) diff -= 12;
+    if (diff < -6) diff += 12;
+    if (diff === 0)  return targetLetter;
+    if (diff === 1)  return targetLetter + '♯';
+    if (diff === -1) return targetLetter + '♭';
+    if (diff === 2)  return targetLetter + '𝄪';
+    if (diff === -2) return targetLetter + '𝄫';
+    return CHROMATIC_SHARP[chromaIdx];
+  }
+
+  function rootLetter(root) { return root.replace('m','').charAt(0); }
+
+  function buildScale(root, isMinor) {
+    const rootName = root.replace('m','');
+    const rootIdx = noteIndex(rootName);
+    const rl = rootLetter(root);
+    const pattern = isMinor ? MINOR_DEGREE_SEMITONES : MAJOR_DEGREE_SEMITONES;
+    const scale = [];
+    for (let i = 0; i < 7; i++) {
+      const targetLetter = stepLetter(rl, i);
+      const chromaIdx = (rootIdx + pattern[i]) % 12;
+      scale.push({
+        name: spellWithLetter(chromaIdx, targetLetter),
+        chromaIdx,
+        degree: i + 1,
+      });
+    }
+    return scale;
+  }
+
+  function notesEqual(a, b) {
+    return noteIndex(a) === noteIndex(b);
+  }
+
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ---- STATE ----
+  let state = {
+    mode: 'discovery',
+    qNum: 0,
+    correct: 0,
+    total: 0,
+    streak: 0,
+    answered: false,
+    // discovery mode
+    startNote: null,
+    targets: [],         // shuffled array of {short, name, semi, letterStep, answer, solved}
+    activeTargetIdx: 0,
+    // diatonic mode
+    scaleRoot: null,
+    scaleIsMinor: false,
+    scale: [],
+    quizDegrees: [],     // shuffled degrees 2..7 (skip degree 1 = root)
+    activeQuizIdx: 0,
+    chain: [],           // visualization slots
+    // 4ths/5ths drill mode
+    fifthsQ: null,       // current single-question object
+    fifthsRound: 0,      // question count within current set
+    fifthsTotalInSet: 10,
+  };
+
+  // ---- DISCOVERY MODE ----
+  function genDiscovery() {
+    const startNote = pick(STARTING_NOTES);
+    const startIdx = noteIndex(startNote);
+    const startLetter = startNote.charAt(0);
+
+    // Build 7 random distinct targets from the 11 intervals
+    const chosenIntervals = shuffle(ALL_INTERVALS).slice(0, 7);
+
+    const targets = chosenIntervals.map(iv => {
+      let targetLetter = stepLetter(startLetter, iv.letterStep);
+      if (iv.short === 'TT') targetLetter = stepLetter(startLetter, 3);
+      const chromaIdx = (startIdx + iv.semi) % 12;
+      const answer = spellWithLetter(chromaIdx, targetLetter);
+      return {
+        short: iv.short,
+        name: iv.name,
+        semi: iv.semi,
+        answer,
+        solved: false,
+      };
+    });
+
+    state.startNote = startNote;
+    state.targets = targets;
+    state.activeTargetIdx = 0;
+    state.answered = false;
+
+    return {
+      promptLine: `Interval discovery from ${startNote}`,
+      taskLine: `Starting from <span class="root">${startNote}</span>, find the note for each interval target below.`,
+      modeInfo: `Targets are randomized — no fixed order. Click a target to make it active, then pick the right note.`,
+    };
+  }
+
+  // ---- DIATONIC MODE ----
+  function genDiatonic() {
+    const isMinor = Math.random() < 0.4;
+    const root = pick(isMinor ? ROOTS_MINOR : ROOTS_MAJOR);
+    const scale = buildScale(root, isMinor);
+
+    // Quiz in stacked-thirds order: 3, 5, 7, 2, 4, 6 (= 9, 11, 13 once past the octave)
+    // This walks the scale by thirds — the chord-tones sequence.
+    const quizDegrees = [3, 5, 7, 2, 4, 6];
+
+    // Build chain in the SAME order as quiz: degree 1 first (given), then 3, 5, 7, 2, 4, 6
+    // Each slot shows both the degree number and its extension name (3, 5, 7, 9, 11, 13)
+    const orderedDegrees = [1, 3, 5, 7, 2, 4, 6];
+    const extensionLabels = ['1', '3', '5', '7', '9', '11', '13'];
+    const chain = orderedDegrees.map((deg, i) => ({
+      value: scale[deg - 1].name,
+      degree: deg,
+      given: i === 0,
+      filled: i === 0,
+      label: extensionLabels[i],
+    }));
+
+    state.scaleRoot = root;
+    state.scaleIsMinor = isMinor;
+    state.scale = scale;
+    state.quizDegrees = quizDegrees;
+    state.activeQuizIdx = 0;
+    state.chain = chain;
+    state.answered = false;
+
+    const rootDisplay = root.replace('m','') + (isMinor ? ' minor' : ' major');
+    return {
+      promptLine: `Walk ${rootDisplay} by stacked thirds`,
+      taskLine: `Build the chord-tones of <span class="root">${rootDisplay}</span>: <em>1 → 3 → 5 → 7 → 9 → 11 → 13</em>.`,
+      modeInfo: `Stack thirds in the scale: 1, 3, 5, 7 (the basic seventh chord), then 9, 11, 13 (the upper extensions). For 4ths and 5ths, just start the walk on a different scale degree.`,
+    };
+  }
+
+  // ---- 4THS & 5THS DRILL ----
+  function genFifths() {
+    const variants = ['ascending', 'descending', 'identify'];
+    const variant = pick(variants);
+    const isFourth = Math.random() < 0.5;
+    const intervalName = isFourth ? 'perfect 4th' : 'perfect 5th';
+    const semi = isFourth ? 5 : 7;
+    const letterStep = isFourth ? 3 : 4;
+
+    const startNote = pick(STARTING_NOTES);
+    const startIdx = noteIndex(startNote);
+    const startLetter = startNote.charAt(0);
+
+    let q;
+
+    if (variant === 'ascending') {
+      const targetLetter = stepLetter(startLetter, letterStep);
+      const chromaIdx = (startIdx + semi) % 12;
+      const answer = spellWithLetter(chromaIdx, targetLetter);
+      q = {
+        kind: 'note',
+        task: `<span class="root">${startNote}</span> <em>+ ${intervalName} ascending</em> = ?`,
+        answer,
+        startNote,
+        intervalName,
+        direction: 'up',
+      };
+    } else if (variant === 'descending') {
+      const targetLetter = stepLetter(startLetter, -letterStep);
+      const chromaIdx = ((startIdx - semi) % 12 + 12) % 12;
+      const answer = spellWithLetter(chromaIdx, targetLetter);
+      q = {
+        kind: 'note',
+        task: `<span class="root">${startNote}</span> <em>− ${intervalName} descending</em> = ?`,
+        answer,
+        startNote,
+        intervalName,
+        direction: 'down',
+      };
+    } else {
+      // identify the interval between two given notes
+      const goingUp = Math.random() < 0.5;
+      const targetLetter = stepLetter(startLetter, goingUp ? letterStep : -letterStep);
+      const chromaIdx = goingUp ? (startIdx + semi) % 12 : ((startIdx - semi) % 12 + 12) % 12;
+      const otherNote = spellWithLetter(chromaIdx, targetLetter);
+      const arrow = goingUp ? '↑' : '↓';
+      q = {
+        kind: 'interval',
+        task: `<span class="root">${startNote}</span> <em>${arrow}</em> <span class="root">${otherNote}</span> — <em>which interval?</em>`,
+        answer: intervalName,
+        fromNote: startNote,
+        toNote: otherNote,
+        direction: goingUp ? 'up' : 'down',
+      };
+    }
+
+    state.fifthsQ = q;
+    state.answered = false;
+
+    return {
+      promptLine: `4ths & 5ths · ${variant}`,
+      taskLine: q.task,
+      modeInfo: `Three variants mix randomly: pick a note above, pick a note below, or identify the interval between two given notes.`,
+    };
+  }
+
+  // ---- SINGLE INTERVAL DRILL (any of the 11 intervals, three variants) ----
+  function genSingle() {
+    const variants = ['ascending', 'descending', 'identify'];
+    const variant = pick(variants);
+    const iv = pick(ALL_INTERVALS);
+    const intervalName = iv.name;
+    const semi = iv.semi;
+    const letterStep = iv.letterStep;
+
+    const startNote = pick(STARTING_NOTES);
+    const startIdx = noteIndex(startNote);
+    const startLetter = startNote.charAt(0);
+
+    let q;
+
+    if (variant === 'ascending') {
+      let targetLetter = stepLetter(startLetter, letterStep);
+      // For tritone, use the same letter as P4 (i.e. ♯4 spelling)
+      if (iv.short === 'TT') targetLetter = stepLetter(startLetter, 3);
+      const chromaIdx = (startIdx + semi) % 12;
+      const answer = spellWithLetter(chromaIdx, targetLetter);
+      q = {
+        kind: 'note',
+        task: `<span class="root">${startNote}</span> <em>+ ${intervalName} ascending</em> = ?`,
+        answer,
+        startNote,
+        intervalName,
+        direction: 'up',
+      };
+    } else if (variant === 'descending') {
+      let targetLetter = stepLetter(startLetter, -letterStep);
+      if (iv.short === 'TT') targetLetter = stepLetter(startLetter, -3);
+      const chromaIdx = ((startIdx - semi) % 12 + 12) % 12;
+      const answer = spellWithLetter(chromaIdx, targetLetter);
+      q = {
+        kind: 'note',
+        task: `<span class="root">${startNote}</span> <em>− ${intervalName} descending</em> = ?`,
+        answer,
+        startNote,
+        intervalName,
+        direction: 'down',
+      };
+    } else {
+      // identify the interval — direction shown explicitly with arrow
+      const goingUp = Math.random() < 0.5;
+      let targetLetter = stepLetter(startLetter, goingUp ? letterStep : -letterStep);
+      if (iv.short === 'TT') targetLetter = stepLetter(startLetter, goingUp ? 3 : -3);
+      const chromaIdx = goingUp ? (startIdx + semi) % 12 : ((startIdx - semi) % 12 + 12) % 12;
+      const otherNote = spellWithLetter(chromaIdx, targetLetter);
+      const arrow = goingUp ? '↑' : '↓';
+      q = {
+        kind: 'interval',
+        task: `<span class="root">${startNote}</span> <em>${arrow}</em> <span class="root">${otherNote}</span> — <em>which interval?</em>`,
+        answer: intervalName,
+        fromNote: startNote,
+        toNote: otherNote,
+        direction: goingUp ? 'up' : 'down',
+        // For single mode, all 11 intervals are valid options
+        allIntervals: true,
+      };
+    }
+
+    state.fifthsQ = q;  // reuse fifths state slot
+    state.answered = false;
+
+    return {
+      promptLine: `Single interval · ${variant}`,
+      taskLine: q.task,
+      modeInfo: `One question at a time. Random interval (m2 through M7), random starting note, random variant — note above, note below, or identify the interval.`,
+    };
+  }
+
+  // ---- RENDER ----
+  function newRound() {
+    let q;
+    if (state.mode === 'discovery') {
+      q = genDiscovery();
+      document.getElementById('targetsSection').style.display = '';
+      document.getElementById('slotsSection').style.display = 'none';
+      document.getElementById('singleSection').style.display = 'none';
+    } else if (state.mode === 'diatonic') {
+      q = genDiatonic();
+      document.getElementById('targetsSection').style.display = 'none';
+      document.getElementById('slotsSection').style.display = '';
+      document.getElementById('singleSection').style.display = 'none';
+    } else if (state.mode === 'fifths') {
+      q = genFifths();
+      document.getElementById('targetsSection').style.display = 'none';
+      document.getElementById('slotsSection').style.display = 'none';
+      document.getElementById('singleSection').style.display = '';
+    } else {
+      // single
+      q = genSingle();
+      document.getElementById('targetsSection').style.display = 'none';
+      document.getElementById('slotsSection').style.display = 'none';
+      document.getElementById('singleSection').style.display = '';
+    }
+
+    state.qNum += 1;
+
+    document.getElementById('promptLine').textContent = q.promptLine;
+    document.getElementById('taskLine').innerHTML = q.taskLine;
+    document.getElementById('modeInfo').textContent = q.modeInfo;
+
+    if (state.mode === 'discovery') renderTargets();
+    else if (state.mode === 'diatonic') renderSlots();
+    else renderFifths();
+
+    renderPicker();
+    clearFeedback();
+    document.getElementById('nextBtn').disabled = true;
+    updateStats();
+    updatePickerLabel();
+  }
+
+  function updatePickerLabel() {
+    const lbl = document.getElementById('pickerLabel');
+    if (state.mode === 'discovery') {
+      const t = state.targets[state.activeTargetIdx];
+      if (t) lbl.innerHTML = `— Find the <strong>${t.name}</strong> above ${state.startNote} —`;
+      else lbl.textContent = '— All targets solved —';
+    } else if (state.mode === 'diatonic') {
+      const deg = state.quizDegrees[state.activeQuizIdx];
+      if (deg !== undefined) {
+        const rootDisplay = state.scaleRoot.replace('m','') + (state.scaleIsMinor ? 'm' : '');
+        const extNames = { 3: '3rd', 5: '5th', 7: '7th', 2: '9th', 4: '11th', 6: '13th' };
+        const extLabel = extNames[deg] || `Degree ${deg}`;
+        lbl.innerHTML = `— The <strong>${extLabel}</strong> of ${rootDisplay} (degree ${deg}) —`;
+      } else lbl.textContent = '— Chain complete —';
+    } else {
+      // fifths or single mode (both use state.fifthsQ)
+      const q = state.fifthsQ;
+      if (!q) { lbl.textContent = '—'; return; }
+      if (q.kind === 'interval') {
+        lbl.innerHTML = `— Pick the interval —`;
+      } else {
+        const dirWord = q.direction === 'up' ? 'above' : 'below';
+        lbl.innerHTML = `— Pick the note that is a <strong>${q.intervalName}</strong> ${dirWord} ${q.startNote} —`;
+      }
+    }
+  }
+
+  function renderTargets() {
+    const el = document.getElementById('targets');
+    el.innerHTML = '';
+    state.targets.forEach((t, i) => {
+      const pill = document.createElement('button');
+      pill.className = 'target-pill';
+      if (t.solved) pill.classList.add('solved');
+      else if (i === state.activeTargetIdx) pill.classList.add('active');
+      pill.dataset.idx = i;
+      pill.disabled = t.solved;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = t.name;
+      pill.appendChild(nameSpan);
+
+      if (t.solved) {
+        const ans = document.createElement('span');
+        ans.className = 'answer-note';
+        ans.textContent = '= ' + t.answer;
+        pill.appendChild(ans);
+      }
+
+      pill.addEventListener('click', () => {
+        if (!t.solved) {
+          state.activeTargetIdx = i;
+          renderTargets();
+          updatePickerLabel();
+        }
+      });
+      el.appendChild(pill);
+    });
+
+    const solved = state.targets.filter(t => t.solved).length;
+    document.getElementById('targetsProgress').textContent = `${solved} / ${state.targets.length}`;
+  }
+
+  function renderSlots() {
+    const el = document.getElementById('slots');
+    el.innerHTML = '';
+    const activeDeg = state.quizDegrees[state.activeQuizIdx];
+    state.chain.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'slot';
+      const isActive = !s.filled && s.degree === activeDeg;
+      if (s.given) div.classList.add('given');
+      else if (s.filled) div.classList.add('filled');
+      if (isActive) div.classList.add('active');
+
+      const noteSpan = document.createElement('span');
+      noteSpan.textContent = s.filled || s.given ? s.value : '?';
+      div.appendChild(noteSpan);
+
+      const lblSpan = document.createElement('span');
+      lblSpan.className = 'slot-label';
+      lblSpan.textContent = s.label;
+      div.appendChild(lblSpan);
+
+      el.appendChild(div);
+    });
+    const filled = state.chain.filter(s => s.filled).length;
+    document.getElementById('slotsProgress').textContent = `${filled} / ${state.chain.length}`;
+  }
+
+  function renderFifths() {
+    document.getElementById('singleVariantLabel').textContent =
+      state.fifthsQ.kind === 'interval' ? 'Identify the interval' :
+      (state.fifthsQ.direction === 'up' ? 'Build above the note' : 'Build below the note');
+    document.getElementById('singleProgress').textContent = `Q ${state.qNum}`;
+  }
+
+  function renderPicker() {
+    const notePicker = document.getElementById('picker');
+    const intPicker = document.getElementById('intervalPicker');
+    notePicker.innerHTML = '';
+    intPicker.innerHTML = '';
+
+    const isIntervalQ = (state.mode === 'fifths' || state.mode === 'single') && state.fifthsQ && state.fifthsQ.kind === 'interval';
+
+    if (isIntervalQ) {
+      notePicker.style.display = 'none';
+      intPicker.style.display = 'grid';
+      // Single mode: show all 11 intervals in a 3-column grid
+      // Fifths mode: show only P4 and P5 in a 2-column grid
+      const isAllIntervals = state.fifthsQ.allIntervals;
+      if (isAllIntervals) {
+        intPicker.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        ALL_INTERVALS.forEach(iv => {
+          const btn = document.createElement('button');
+          btn.className = 'note-btn';
+          btn.textContent = iv.name;
+          btn.style.fontSize = '13px';
+          btn.style.padding = '12px 6px';
+          btn.dataset.value = iv.name;
+          btn.addEventListener('click', () => handlePick(iv.name, btn));
+          intPicker.appendChild(btn);
+        });
+      } else {
+        intPicker.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        ['perfect 4th', 'perfect 5th'].forEach(name => {
+          const btn = document.createElement('button');
+          btn.className = 'note-btn';
+          btn.textContent = name;
+          btn.style.fontSize = '16px';
+          btn.style.padding = '16px 8px';
+          btn.dataset.value = name;
+          btn.addEventListener('click', () => handlePick(name, btn));
+          intPicker.appendChild(btn);
+        });
+      }
+      return;
+    }
+
+    notePicker.style.display = 'grid';
+    intPicker.style.display = 'none';
+
+    // Always show dual spelling on buttons so user sees both names
+    CHROMATIC_DUAL.forEach((label) => {
+      const btn = document.createElement('button');
+      btn.className = 'note-btn';
+      btn.textContent = label;
+      btn.dataset.value = label;
+      btn.addEventListener('click', () => handlePick(label, btn));
+      notePicker.appendChild(btn);
+    });
+  }
+
+  function handlePick(value, btn) {
+    if (state.mode === 'discovery') handlePickDiscovery(value, btn);
+    else if (state.mode === 'diatonic') handlePickDiatonic(value, btn);
+    else handlePickFifths(value, btn);  // covers both 'fifths' and 'single' modes
+  }
+
+  function handlePickFifths(value, btn) {
+    if (state.answered) return;
+    const q = state.fifthsQ;
+    state.total += 1;
+
+    let correct;
+    if (q.kind === 'interval') {
+      correct = value === q.answer;
+    } else {
+      correct = notesEqual(value, q.answer);
+    }
+
+    if (correct) {
+      state.correct += 1;
+      state.streak += 1;
+      state.answered = true;
+      let msg;
+      if (q.kind === 'interval') {
+        msg = `<strong>${q.answer}</strong> ✓ — from ${q.fromNote} to ${q.toNote} is a ${q.answer} ${q.direction === 'up' ? 'ascending' : 'descending'}.`;
+      } else {
+        const dirWord = q.direction === 'up' ? 'above' : 'below';
+        msg = `<strong>${q.answer}</strong> ✓ — that's a ${q.intervalName} ${dirWord} ${q.startNote}.`;
+      }
+      showFeedback('correct', msg);
+      document.getElementById('nextBtn').disabled = false;
+    } else {
+      state.streak = 0;
+      btn.classList.add('flash-wrong');
+      setTimeout(() => btn.classList.remove('flash-wrong'), 400);
+      let msg;
+      if (q.kind === 'interval') {
+        msg = `Not <strong>${value}</strong>. Try the other interval.`;
+      } else {
+        const dirWord = q.direction === 'up' ? 'above' : 'below';
+        msg = `Not <strong>${value}</strong>. The ${q.intervalName} ${dirWord} ${q.startNote} is something else — try again.`;
+      }
+      showFeedback('wrong', msg);
+    }
+    updateStats();
+  }
+
+  function handlePickDiscovery(value, btn) {
+    if (state.activeTargetIdx >= state.targets.length) return;
+    const target = state.targets[state.activeTargetIdx];
+    if (target.solved) return;
+
+    state.total += 1;
+    const correct = notesEqual(value, target.answer);
+
+    if (correct) {
+      state.correct += 1;
+      state.streak += 1;
+      target.solved = true;
+      // Move to next unsolved
+      let nextIdx = state.targets.findIndex((t, i) => i > state.activeTargetIdx && !t.solved);
+      if (nextIdx === -1) nextIdx = state.targets.findIndex(t => !t.solved);
+
+      if (nextIdx === -1) {
+        // All solved
+        showFeedback('complete', `All targets solved. <strong>Score: ${state.correct} / ${state.total}</strong>.<span class="hint">${state.targets.map(t => t.short + '=' + t.answer).join(' · ')}</span>`);
+        document.getElementById('nextBtn').disabled = false;
+        state.answered = true;
+      } else {
+        state.activeTargetIdx = nextIdx;
+        showFeedback('correct', `<strong>${target.answer}</strong> ✓ — that's the ${target.name} above ${state.startNote}.`);
+      }
+      renderTargets();
+      updatePickerLabel();
+    } else {
+      state.streak = 0;
+      btn.classList.add('flash-wrong');
+      setTimeout(() => btn.classList.remove('flash-wrong'), 400);
+      showFeedback('wrong', `Not <strong>${value}</strong>. Try again — find the <strong>${target.name}</strong> above ${state.startNote}.<span class="hint">Tip: count ${target.semi} semitone${target.semi === 1 ? '' : 's'} up.</span>`);
+    }
+    updateStats();
+  }
+
+  function handlePickDiatonic(value, btn) {
+    if (state.activeQuizIdx >= state.quizDegrees.length) return;
+    const deg = state.quizDegrees[state.activeQuizIdx];
+    const target = state.scale[deg - 1].name;
+
+    state.total += 1;
+    const correct = notesEqual(value, target);
+
+    if (correct) {
+      state.correct += 1;
+      state.streak += 1;
+      // Find the slot in chain whose degree matches and mark filled
+      const slot = state.chain.find(s => s.degree === deg);
+      if (slot) slot.filled = true;
+      state.activeQuizIdx += 1;
+
+      if (state.activeQuizIdx >= state.quizDegrees.length) {
+        const chainStr = state.chain.map(s => s.value).join(' → ');
+        showFeedback('complete', `Chain complete. <strong>Score: ${state.correct} / ${state.total}</strong>.<span class="hint">${chainStr}</span>`);
+        document.getElementById('nextBtn').disabled = false;
+        state.answered = true;
+      } else {
+        showFeedback('correct', `<strong>${target}</strong> ✓ — degree ${deg}.`);
+      }
+      renderSlots();
+      updatePickerLabel();
+    } else {
+      state.streak = 0;
+      btn.classList.add('flash-wrong');
+      setTimeout(() => btn.classList.remove('flash-wrong'), 400);
+      const rootDisp = state.scaleRoot.replace('m','') + (state.scaleIsMinor ? ' minor' : ' major');
+      showFeedback('wrong', `Not <strong>${value}</strong>. Try again — degree <strong>${deg}</strong> of ${rootDisp}.`);
+    }
+    updateStats();
+  }
+
+  function showFeedback(kind, html) {
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback show ' + kind;
+    fb.innerHTML = html;
+  }
+
+  function clearFeedback() {
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback';
+    fb.innerHTML = '';
+  }
+
+  function updateStats() {
+    document.getElementById('qNumber').textContent = state.qNum;
+    document.getElementById('score').textContent = `${state.correct} / ${state.total}`;
+    document.getElementById('streak').textContent = state.streak;
+  }
+
+  function revealAll() {
+    if (state.mode === 'discovery') {
+      state.targets.forEach(t => t.solved = true);
+      renderTargets();
+      showFeedback('complete', `Revealed.<span class="hint">${state.targets.map(t => t.short + '=' + t.answer).join(' · ')}</span>`);
+    } else if (state.mode === 'diatonic') {
+      state.chain.forEach(s => { s.filled = true; });
+      state.activeQuizIdx = state.quizDegrees.length;
+      renderSlots();
+      const chainStr = state.chain.map(s => `${s.value}(${s.label})`).join(' → ');
+      showFeedback('complete', `Revealed.<span class="hint">${chainStr}</span>`);
+    } else {
+      // fifths or single mode — just show the answer
+      const q = state.fifthsQ;
+      if (q) {
+        showFeedback('complete', `Answer: <strong>${q.answer}</strong>.`);
+      }
+    }
+    state.answered = true;
+    updatePickerLabel();
+    document.getElementById('nextBtn').disabled = false;
+  }
+
+  function reset() {
+    state.qNum = 0;
+    state.correct = 0;
+    state.total = 0;
+    state.streak = 0;
+    newRound();
+  }
+
+  // ---- EVENTS ----
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      state.mode = tab.dataset.mode;
+      reset();
+    });
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', newRound);
+  document.getElementById('resetBtn').addEventListener('click', reset);
+  document.getElementById('revealBtn').addEventListener('click', revealAll);
+
+  newRound();
+
+  // ---- PWA: register service worker for offline use ----
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
