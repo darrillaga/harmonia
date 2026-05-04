@@ -128,6 +128,30 @@
     color: var(--paper);
   }
 
+  .ear-toggle {
+    display: flex;
+    width: fit-content;
+    margin: 0 auto 12px;
+    border: 1px solid var(--rule);
+  }
+  .ear-opt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 9px 22px;
+    background: var(--paper);
+    border: none;
+    border-right: 1px solid var(--rule);
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.12s ease;
+  }
+  .ear-opt:last-child { border-right: none; }
+  .ear-opt:hover { color: var(--ink); }
+  .ear-opt.active { background: var(--ink); color: var(--paper); }
+
   .mode-info {
     font-family: 'Fraunces', serif;
     font-size: 13px;
@@ -498,6 +522,11 @@
       <div class="subtitle">Discover · Walk · Internalize</div>
     </div>
 
+    <div class="ear-toggle">
+      <button class="ear-opt active" id="earOptTheory">Theory</button>
+      <button class="ear-opt" id="earOptEar">Ear</button>
+    </div>
+
     <div class="mode-tabs">
       <button class="mode-tab active" data-mode="discovery">Interval Discovery</button>
       <button class="mode-tab" data-mode="diatonic">Chord-Tones Walk</button>
@@ -699,6 +728,7 @@
   // ---- STATE ----
   let state = {
     mode: 'discovery',
+    earMode: false,
     qNum: 0,
     correct: 0,
     total: 0,
@@ -749,6 +779,13 @@
     state.activeTargetIdx = 0;
     state.answered = false;
 
+    if (state.earMode) {
+      return {
+        promptLine: `Ear · Interval discovery from ${startNote}`,
+        taskLine: `Root is <span class="root">${startNote}</span>. Listen to each interval and name it.`,
+        modeInfo: `The app plays root + a note. Identify the interval by ear. Click a target pill to replay it.`,
+      };
+    }
     return {
       promptLine: `Interval discovery from ${startNote}`,
       taskLine: `Starting from <span class="root">${startNote}</span>, find the note for each interval target below.`,
@@ -787,6 +824,13 @@
     state.answered = false;
 
     const rootDisplay = root.replace('m','') + (isMinor ? ' minor' : ' major');
+    if (state.earMode) {
+      return {
+        promptLine: `Ear · Chord-tones walk in ${rootDisplay}`,
+        taskLine: `Key: <span class="root">${rootDisplay}</span>. Listen and name each chord tone you hear.`,
+        modeInfo: `The app plays root + a chord tone. Identify which degree it is (3, 5, 7, 9, 11 or 13) by ear.`,
+      };
+    }
     return {
       promptLine: `Walk ${rootDisplay} by stacked thirds`,
       taskLine: `Build the chord-tones of <span class="root">${rootDisplay}</span>: <em>1 → 3 → 5 → 7 → 9 → 11 → 13</em>.`,
@@ -797,7 +841,7 @@
   // ---- 4THS & 5THS DRILL ----
   function genFifths() {
     const variants = ['ascending', 'descending', 'identify'];
-    const variant = pick(variants);
+    const variant = state.earMode ? 'identify' : pick(variants);
     const isFourth = Math.random() < 0.5;
     const intervalName = isFourth ? 'perfect 4th' : 'perfect 5th';
     const semi = isFourth ? 5 : 7;
@@ -863,7 +907,7 @@
   // ---- SINGLE INTERVAL DRILL (any of the 11 intervals, three variants) ----
   function genSingle() {
     const variants = ['ascending', 'descending', 'identify'];
-    const variant = pick(variants);
+    const variant = state.earMode ? 'identify' : pick(variants);
     const iv = pick(ALL_INTERVALS);
     const intervalName = iv.name;
     const semi = iv.semi;
@@ -973,28 +1017,41 @@
     document.getElementById('nextBtn').disabled = true;
     updateStats();
     updatePickerLabel();
+
+    if (state.earMode) setTimeout(() => playSequence(), 700);
   }
 
   function updatePickerLabel() {
     const lbl = document.getElementById('pickerLabel');
     if (state.mode === 'discovery') {
-      const t = state.targets[state.activeTargetIdx];
-      if (t) lbl.innerHTML = `— Find the <strong>${t.name}</strong> above ${state.startNote} —`;
-      else lbl.textContent = '— All targets solved —';
+      if (state.earMode) {
+        const t = state.targets[state.activeTargetIdx];
+        lbl.textContent = t ? `— What interval is playing? (above ${state.startNote}) —` : '— All identified —';
+      } else {
+        const t = state.targets[state.activeTargetIdx];
+        if (t) lbl.innerHTML = `— Find the <strong>${t.name}</strong> above ${state.startNote} —`;
+        else lbl.textContent = '— All targets solved —';
+      }
     } else if (state.mode === 'diatonic') {
       const deg = state.quizDegrees[state.activeQuizIdx];
-      if (deg !== undefined) {
+      if (state.earMode) {
         const rootDisplay = state.scaleRoot.replace('m','') + (state.scaleIsMinor ? 'm' : '');
-        const extNames = { 3: '3rd', 5: '5th', 7: '7th', 2: '9th', 4: '11th', 6: '13th' };
-        const extLabel = extNames[deg] || `Degree ${deg}`;
-        lbl.innerHTML = `— The <strong>${extLabel}</strong> of ${rootDisplay} (degree ${deg}) —`;
-      } else lbl.textContent = '— Chain complete —';
+        lbl.textContent = deg !== undefined
+          ? `— Which chord tone of ${rootDisplay} is this? —`
+          : '— Chain complete —';
+      } else {
+        if (deg !== undefined) {
+          const rootDisplay = state.scaleRoot.replace('m','') + (state.scaleIsMinor ? 'm' : '');
+          const extNames = { 3: '3rd', 5: '5th', 7: '7th', 2: '9th', 4: '11th', 6: '13th' };
+          const extLabel = extNames[deg] || `Degree ${deg}`;
+          lbl.innerHTML = `— The <strong>${extLabel}</strong> of ${rootDisplay} (degree ${deg}) —`;
+        } else lbl.textContent = '— Chain complete —';
+      }
     } else {
-      // fifths or single mode (both use state.fifthsQ)
       const q = state.fifthsQ;
       if (!q) { lbl.textContent = '—'; return; }
       if (q.kind === 'interval') {
-        lbl.innerHTML = `— Pick the interval —`;
+        lbl.innerHTML = state.earMode ? `— Listen and identify the interval —` : `— Pick the interval —`;
       } else {
         const dirWord = q.direction === 'up' ? 'above' : 'below';
         lbl.innerHTML = `— Pick the note that is a <strong>${q.intervalName}</strong> ${dirWord} ${q.startNote} —`;
@@ -1014,13 +1071,13 @@
       pill.disabled = t.solved;
 
       const nameSpan = document.createElement('span');
-      nameSpan.textContent = t.name;
+      nameSpan.textContent = (state.earMode && !t.solved) ? '?' : t.name;
       pill.appendChild(nameSpan);
 
       if (t.solved) {
         const ans = document.createElement('span');
         ans.className = 'answer-note';
-        ans.textContent = '= ' + t.answer;
+        ans.textContent = state.earMode ? ('= ' + t.answer) : ('= ' + t.answer);
         pill.appendChild(ans);
       }
 
@@ -1029,6 +1086,7 @@
           state.activeTargetIdx = i;
           renderTargets();
           updatePickerLabel();
+          if (state.earMode) setTimeout(() => playSequence(), 100);
         }
       });
       el.appendChild(pill);
@@ -1077,6 +1135,40 @@
     const intPicker = document.getElementById('intervalPicker');
     notePicker.innerHTML = '';
     intPicker.innerHTML = '';
+
+    // Ear mode: discovery → name the interval; diatonic → name the degree
+    if (state.earMode && state.mode === 'discovery') {
+      notePicker.style.display = 'none';
+      intPicker.style.display = 'grid';
+      intPicker.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      ALL_INTERVALS.forEach(iv => {
+        const btn = document.createElement('button');
+        btn.className = 'note-btn';
+        btn.textContent = iv.name;
+        btn.style.fontSize = '13px';
+        btn.style.padding = '12px 6px';
+        btn.addEventListener('click', () => handlePick(iv.name, btn));
+        intPicker.appendChild(btn);
+      });
+      return;
+    }
+
+    if (state.earMode && state.mode === 'diatonic') {
+      notePicker.style.display = 'none';
+      intPicker.style.display = 'grid';
+      intPicker.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      // Labels are extension names (3, 5, 7, 9, 11, 13) — degree 1 is always the given root
+      ['3', '5', '7', '9', '11', '13'].forEach(label => {
+        const btn = document.createElement('button');
+        btn.className = 'note-btn';
+        btn.textContent = label;
+        btn.style.fontSize = '18px';
+        btn.style.padding = '14px 6px';
+        btn.addEventListener('click', () => handlePick(label, btn));
+        intPicker.appendChild(btn);
+      });
+      return;
+    }
 
     const isIntervalQ = (state.mode === 'fifths' || state.mode === 'single') && state.fifthsQ && state.fifthsQ.kind === 'interval';
 
@@ -1181,24 +1273,29 @@
     if (target.solved) return;
 
     state.total += 1;
-    const correct = notesEqual(value, target.answer);
+    const correct = state.earMode ? (value === target.name) : notesEqual(value, target.answer);
 
     if (correct) {
       state.correct += 1;
       state.streak += 1;
       target.solved = true;
-      // Move to next unsolved
       let nextIdx = state.targets.findIndex((t, i) => i > state.activeTargetIdx && !t.solved);
       if (nextIdx === -1) nextIdx = state.targets.findIndex(t => !t.solved);
 
       if (nextIdx === -1) {
-        // All solved
-        showFeedback('complete', `All targets solved. <strong>Score: ${state.correct} / ${state.total}</strong>.<span class="hint">${state.targets.map(t => t.short + '=' + t.answer).join(' · ')}</span>`);
+        const hint = state.earMode
+          ? state.targets.map(t => t.short + '=' + t.answer).join(' · ')
+          : state.targets.map(t => t.short + '=' + t.answer).join(' · ');
+        showFeedback('complete', `All targets identified. <strong>Score: ${state.correct} / ${state.total}</strong>.<span class="hint">${hint}</span>`);
         document.getElementById('nextBtn').disabled = false;
         state.answered = true;
       } else {
         state.activeTargetIdx = nextIdx;
-        showFeedback('correct', `<strong>${target.answer}</strong> ✓ — that's the ${target.name} above ${state.startNote}.`);
+        const msg = state.earMode
+          ? `<strong>${target.name}</strong> ✓ — the ${target.name} above ${state.startNote} is ${target.answer}.`
+          : `<strong>${target.answer}</strong> ✓ — that's the ${target.name} above ${state.startNote}.`;
+        showFeedback('correct', msg);
+        if (state.earMode) setTimeout(() => playSequence(), 900);
       }
       renderTargets();
       updatePickerLabel();
@@ -1206,7 +1303,10 @@
       state.streak = 0;
       btn.classList.add('flash-wrong');
       setTimeout(() => btn.classList.remove('flash-wrong'), 400);
-      showFeedback('wrong', `Not <strong>${value}</strong>. Try again — find the <strong>${target.name}</strong> above ${state.startNote}.<span class="hint">Tip: count ${target.semi} semitone${target.semi === 1 ? '' : 's'} up.</span>`);
+      const msg = state.earMode
+        ? `Not <strong>${value}</strong> — listen again and try.`
+        : `Not <strong>${value}</strong>. Try again — find the <strong>${target.name}</strong> above ${state.startNote}.<span class="hint">Tip: count ${target.semi} semitone${target.semi === 1 ? '' : 's'} up.</span>`;
+      showFeedback('wrong', msg);
     }
     updateStats();
   }
@@ -1215,14 +1315,15 @@
     if (state.activeQuizIdx >= state.quizDegrees.length) return;
     const deg = state.quizDegrees[state.activeQuizIdx];
     const target = state.scale[deg - 1].name;
+    const extLabels = { 3: '3', 5: '5', 7: '7', 2: '9', 4: '11', 6: '13' };
+    const extNames  = { 3: '3rd', 5: '5th', 7: '7th', 2: '9th', 4: '11th', 6: '13th' };
 
     state.total += 1;
-    const correct = notesEqual(value, target);
+    const correct = state.earMode ? (value === extLabels[deg]) : notesEqual(value, target);
 
     if (correct) {
       state.correct += 1;
       state.streak += 1;
-      // Find the slot in chain whose degree matches and mark filled
       const slot = state.chain.find(s => s.degree === deg);
       if (slot) slot.filled = true;
       state.activeQuizIdx += 1;
@@ -1233,7 +1334,11 @@
         document.getElementById('nextBtn').disabled = false;
         state.answered = true;
       } else {
-        showFeedback('correct', `<strong>${target}</strong> ✓ — degree ${deg}.`);
+        const msg = state.earMode
+          ? `<strong>${extNames[deg]}</strong> ✓ — that note is ${target}.`
+          : `<strong>${target}</strong> ✓ — degree ${deg}.`;
+        showFeedback('correct', msg);
+        if (state.earMode) setTimeout(() => playSequence(), 900);
       }
       renderSlots();
       updatePickerLabel();
@@ -1242,7 +1347,10 @@
       btn.classList.add('flash-wrong');
       setTimeout(() => btn.classList.remove('flash-wrong'), 400);
       const rootDisp = state.scaleRoot.replace('m','') + (state.scaleIsMinor ? ' minor' : ' major');
-      showFeedback('wrong', `Not <strong>${value}</strong>. Try again — degree <strong>${deg}</strong> of ${rootDisp}.`);
+      const msg = state.earMode
+        ? `Not the <strong>${value}</strong> — listen again and try.`
+        : `Not <strong>${value}</strong>. Try again — degree <strong>${deg}</strong> of ${rootDisp}.`;
+      showFeedback('wrong', msg);
     }
     updateStats();
   }
@@ -1309,6 +1417,15 @@
   document.getElementById('nextBtn').addEventListener('click', newRound);
   document.getElementById('resetBtn').addEventListener('click', reset);
   document.getElementById('revealBtn').addEventListener('click', revealAll);
+
+  ['earOptTheory', 'earOptEar'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => {
+      state.earMode = (id === 'earOptEar');
+      document.getElementById('earOptTheory').classList.toggle('active', !state.earMode);
+      document.getElementById('earOptEar').classList.toggle('active', state.earMode);
+      reset();
+    });
+  });
 
   // ---- AUDIO ----
   let _audioCtx = null;
@@ -1380,17 +1497,27 @@
       const degSemis = state.scaleIsMinor ? MINOR_DEGREE_SEMITONES : MAJOR_DEGREE_SEMITONES;
       const rootMidi = noteToMidi(state.scaleRoot.replace('m', ''), 4);
       if (rootMidi === null) return notes;
-      // chain display order: [1, 3, 5, 7, 2, 4, 6]
-      // degrees 2, 4, 6 are the upper extensions (9th, 11th, 13th) → +12
-      const orderedDegrees = [1, 3, 5, 7, 2, 4, 6];
-      state.chain.forEach((s, i) => {
-        if (s.filled || s.given) {
-          const deg = orderedDegrees[i];
+      if (state.earMode) {
+        // play root + the current quiz chord tone for identification
+        const deg = state.quizDegrees[state.activeQuizIdx];
+        if (deg !== undefined) {
           let semi = degSemis[deg - 1];
           if ([2, 4, 6].includes(deg)) semi += 12;
-          notes.push(rootMidi + semi);
+          notes.push(rootMidi, rootMidi + semi);
         }
-      });
+      } else {
+        // chain display order: [1, 3, 5, 7, 2, 4, 6]
+        // degrees 2, 4, 6 are the upper extensions (9th, 11th, 13th) → +12
+        const orderedDegrees = [1, 3, 5, 7, 2, 4, 6];
+        state.chain.forEach((s, i) => {
+          if (s.filled || s.given) {
+            const deg = orderedDegrees[i];
+            let semi = degSemis[deg - 1];
+            if ([2, 4, 6].includes(deg)) semi += 12;
+            notes.push(rootMidi + semi);
+          }
+        });
+      }
 
     } else {
       const q = state.fifthsQ;
